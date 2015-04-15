@@ -155,22 +155,43 @@ A spoken dialog system needs to understand what the user says, process it and pr
 \end{enumerate}
 
 \subsubsection{Automatic Speech Recognition}
-Loosely speaking, the task of an automatic speech recognizer is to transcribe speech to text. More precisely, its task in the spoken dialog systems context is to decode the user's utterance into a structure that the next components of the system can use, called \emph{ASR hypothesis}. Typically the hypothesis is either an 1-best list~\cite{gorin1997may,wang2003word}, an n-best list~\cite{he2003data}, a word confusion network\cite{hakkani2006beyond} or a word lattice~\cite{oerder1993word}. Word lattices are the richest but also the most complex structures. It has been shown that using word lattices or word confusion networks in the spoken language understanding yields substantially better results over 1-best hypothesis~\cite{tur2002improving}.
+Loosely speaking, the task of an automatic speech recognizer is to transcribe speech to text. More precisely, its task in the spoken dialog systems context is to decode the user's utterance into a structure called \emph{ASR hypothesis} that the next components of the system can use. Typically the hypothesis is either an 1-best list~\cite{gorin1997may,wang2003word}, an n-best list~\cite{he2003data}, a word confusion network\cite{hakkani2006beyond} or a word lattice~\cite{oerder1993word}. Word lattices are the richest but also the most complex structures to work with. It has been shown that using word lattices or word confusion networks in the spoken language understanding yields substantially better results over 1-best hypothesis~\cite{tur2002improving}.
 
 There are open-source and commercial ASR solutions available with varying capabilities and purposes of use. The most pouplar open-source solution is Kaldi~\cite{povey2011kaldi}, which can be trained out-of-the-box to provide state-of-the-art ASR performance. Google Speech API\footnote{https://www.google.com/intl/en/chrome/demos/speech.html} is a popular commercial solution that is very fast and accurate for general speech and supports a lot of languages, but is not customizable and has unclear licensing conditions. Nuance's\footnote{http://dragonmobile.nuancemobiledeveloper.com/public/} commercial recognizers are more flexible but they are paid and closed-source. ISpeech ASR API\footnote{http://www.ispeech.org/api} is also customizable (users can select expected speech type: text messages, voice mail, dictation) but it does not allow full customization and is also paid. AT\&T Watson\footnote{http://developer.att.com/apis/speech} allows users to provide a custom grammar (language model) but
 its free use is limited.
 
 \subsubsection{Spoken Language Understanding}
-Spoken language understanding (SLU) unit aims to interpret the user's intention from their speech utterance~\cite{wang2005spoken}. Particularly it converts the ASR hypothesis to its abstract meaning representation. For example ``yes'' could be transformed as ``affirm()'', or ``I want to go to Brno'' as ``inform(task=find\_connection)\&inform(to\_stop=Brno)'' in the meaning representation used in the ALEX dialog system~\cite{duvsek2014alex}. However, the meaning representation is arbitrary and adjusted to the particular dialog system~\cite{skantze2008galatea,he2003data}.
+Spoken language understanding (SLU) unit aims to interpret the user's intention from their speech utterance~\cite{wang2005spoken}. Particularly it converts the ASR hypothesis to its abstract meaning representation. For example ``yes'' could be transformed as ``affirm()'', or ``I want to go to Brno'' as ``inform(task=find\_connection)\&inform(to\_stop=Brno)'' in the meaning representation used in the ALEX dialog system~\cite{duvsek2014alex}. The meaning representation is arbitrary and adjusted to the particular dialog system. Examples of other representations can be found in~\cite{skantze2008galatea,he2003data}.
 
-Historically, SLU has been done by manually writing grammars used to fill slots in semantic frames~\cite{ward1994recent,dowding1993gemini}, which is expensive and non-flexible, because an expert needs to laborously maintain it, and as the complexity of the domain grows the maintanence effort grows much more. Instead, statistical approach to SLU has been adopted, where SLU is viewed as a pattern recognition problem
+Historically, SLU has been done by manually writing grammars used to fill slots in semantic frames~\cite{ward1994recent,dowding1993gemini}, but this is expensive and non-flexible, because an expert needs to devise the grammar and then laborously maintain it. As the complexity of the domain grows the maintanence effort grows much more. Instead, statistical approach to SLU has been adopted, where SLU is viewed as a pattern recognition problem
 $$\hat M=\operatorname{arg~max}_M \operatorname{P}(M|W)$$
-where we are looking for the best abstract meaning representation of the input $M$ given the ASR hypothesis $W$. Finite-state tagger approach uses HMM to model the joint probability of the words and abstract meaning representation given the acoustic signal~\cite{pieraccini1992progress,pieraccini1992stochastic} . \cite{he2003data} proposed a Hidden Vector State model that infers stack operations to parse the user's utterance and learn some form of hierarchy in an unsupervised way.
+where we are looking for the best abstract meaning representation $M$ of the input given the ASR hypothesis $W$. The main benefit of this approach is the ability of the model to leverage the training data to improve its performance. HMM can be used to model the joint probability of the words and abstract meaning representation given the acoustic signal~\cite{pieraccini1992progress,pieraccini1992stochastic}. Hidden Vector State model that learns stack operations to parse the user's utterance in a hierarchical way was proposed~\cite{he2003data}. It is particularly appealing for its ability to infer the hierarchy in the user's utterances without explicit hierarchical annotations. Markov Logic Networks were used for SLU by~\cite{meza2008spoken}, where first-order logic formulaes are used as templates to instantiate complex Markov network that model the slot-value representation. In~\cite{zettlemoyer2007online} an algorithm that learns to parse the text input into lambda-calculus expressions using extended combinatory categorial grammar is given.
 
 \subsubsection{Dialog Management}
-Dialog management consits of two parts: dialog state tracking, and dialog action selection.
+Dialog management component directly influences how natural and intelligent will the dialog system be perceived among its users. Its task is to come up with the next action of the system given the previous progress of the dialog. It usually consists of two parts: dialog state tracking, and dialog action selection.
+
+Dialog state tracking watches the dialog progress and keeps track of important information in form of the dialog state, or as a probability distribution over all possible dialog states called the belief state. The dialog state is a structure that contains several components that take several values, for example a component ``food'' that can take values ``chinese'', ``indian'', or ``thai'', and a component ``area'' that take values ``north'' and ``south'', and usually only the information needed for the dialog action selection is tracked.
+
+Dialog action selection acts upon the dialog state or the belief state to generate the next action. There are handcrafted approaches to the next action selection~\cite{pieraccini2005we,skantze2008galatea}, and approaches that automatically learn from observing rewards~\cite{levin2000stochastic,walker2000application,lemon2006isu,thomson2010bayesian}.
+
+\paragraph*{Bayesian Networks}
+Bayesian networks can be used for the belief state tracking~\cite{pulman1996conversational,williams2007applying,bui2006tractable,thomson2010bayesian}. The belief $b$ is updated as
+$$b'(s)=\frac{1}{Z} \cdot P(o'|s,a)\sum_{s'}P(s|s',a)b(s')$$
+where $o$ is the observation, typically the user utterance, $s$ is the dialog state and $a$ is the system action.
+
+\paragraph*{Recurrent Neural Network Tracker}
+Using recurrent neural network (RNN) for dialog state tracking has been proposed in~\cite{henderson2014word,henderson2013deep} using n-grams from n-best lists as features.
+
+\paragraph*{Ranking-based Tracking}
+The dialog state tracking was poisted as a ranking problem in~\cite{williams2014web}, where all the possible dialog states given the observed SLU hypotheses are enumerated and then ranked using a LambdaMART ranking algorithm.
+
+\paragraph*{Discriminative Model Tracking}
+Generalized linear regression model $f$ was trained to update the belief state
+$$b'(s)=f(b(s), a, o)$$
+and shown to outperfrom heuristic upddate rules~\cite{bohus2006k}.
 
 \subsubsection{Natural Language Generation}
+The natural language generation (NLG) component generates the natural language utterance of the system action. For example, if the system generates the action \texttt{confirm(food=chinese)} then the NLG should generate ``Did you say chinese food?''. The simplest approach is a template-based NLG that has a database of templates, where for each possible system action there is a template to be used~\cite{duvsek2014alex}. More sophisticated approach is a data-driven model that given a corpus of (system action; its surface realization) pairs learns to generate the natural language utterances~\cite{mairesse2010phrase}.
 
 \subsubsection{Speech Synthesis}
 
