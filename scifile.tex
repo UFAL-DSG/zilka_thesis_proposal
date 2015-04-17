@@ -1,11 +1,11 @@
 % Use only LaTeX2e, calling the article.cls class and 12-point type.
 
-\documentclass[11pt,twocolumn]{article}
+\documentclass[10pt,twocolumn]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage{amssymb}
 \usepackage{amsmath}
-\usepackage{hyperref}
+\usepackage[draft]{hyperref}
 \usepackage{graphicx}
 
 % Users of the {thebibliography} environment or BibTeX should use the
@@ -168,7 +168,7 @@ $$\hat M=\operatorname{arg~max}_M \operatorname{P}(M|W)$$
 where we are looking for the best abstract meaning representation $M$ of the input given the ASR hypothesis $W$. The main benefit of this approach is the ability of the model to leverage the training data to improve its performance. HMM can be used to model the joint probability of the words and abstract meaning representation given the acoustic signal~\cite{pieraccini1992progress,pieraccini1992stochastic}. Hidden Vector State model that learns stack operations to parse the user's utterance in a hierarchical way was proposed~\cite{he2003data}. It is particularly appealing for its ability to infer the hierarchy in the user's utterances without explicit hierarchical annotations. Markov Logic Networks were used for SLU by~\cite{meza2008spoken}, where first-order logic formulaes are used as templates to instantiate complex Markov network that model the slot-value representation. In~\cite{zettlemoyer2007online} an algorithm that learns to parse the text input into lambda-calculus expressions using extended combinatory categorial grammar is given.
 
 \subsubsection{Dialog Management}
-Dialog management component directly influences how natural and intelligent will the dialog system be perceived among its users. Its task is to come up with the next action of the system given the previous progress of the dialog. It usually consists of two parts: dialog state tracking, and dialog action selection.
+Dialog management (DM) component directly influences how natural and intelligent will the dialog system be perceived among its users. Its task is to come up with the next action of the system given the previous progress of the dialog. It usually consists of two parts: dialog state tracking, and dialog action selection.
 
 Dialog state tracking watches the dialog progress and keeps track of important information in form of the dialog state, or as a probability distribution over all possible dialog states called the belief state. The dialog state is a structure that contains several components that take several values, for example a component ``food'' that can take values ``chinese'', ``indian'', or ``thai'', and a component ``area'' that take values ``north'' and ``south'', and usually only the information needed for the dialog action selection is tracked.
 
@@ -180,56 +180,60 @@ $$b'(s)=\frac{1}{Z} \cdot P(o'|s,a)\sum_{s'}P(s|s',a)b(s')$$
 where $o$ is the observation, typically the user utterance, $s$ is the dialog state and $a$ is the system action.
 
 \paragraph*{Recurrent Neural Network Tracker}
-Using recurrent neural network (RNN) for dialog state tracking has been proposed in~\cite{henderson2014word,henderson2013deep} using n-grams from n-best lists as features.
+Using recurrent neural network (RNN) for dialog state tracking has been proposed in~\cite{henderson2014word,henderson2013deep}. N-gram features from n-best lists are extracted and used as an input to the RNN model at each turn. The hidden state is updated for each slot as
+$$h_t=f(x_t, h_{t-1})$$
+where $h_t=(p_t, m_t)$ consists of the distribution over the slot's values in form of the vector $p_t$ and memory $m_t$.
 
 \paragraph*{Ranking-based Tracking}
-The dialog state tracking was poisted as a ranking problem in~\cite{williams2014web}, where all the possible dialog states given the observed SLU hypotheses are enumerated and then ranked using a LambdaMART ranking algorithm.
+The dialog state tracking was poisted as a ranking problem by~\cite{williams2014web}, where all the possible dialog states given the observed SLU hypotheses so far are enumerated and then ranked using a LambdaMART ranking algorithm. Then the best ranked dialog state is selected as the hypothesis.
 
 \paragraph*{Discriminative Model Tracking}
 Generalized linear regression model $f$ was trained to update the belief state
 $$b'(s)=f(b(s), a, o)$$
-and shown to outperfrom heuristic upddate rules~\cite{bohus2006k}.
+and shown to outperfrom heuristic update rules~\cite{bohus2006k}.
 
 \subsubsection{Natural Language Generation}
-The natural language generation (NLG) component generates the natural language utterance of the system action. For example, if the system generates the action \texttt{confirm(food=chinese)} then the NLG should generate ``Did you say chinese food?''. The simplest approach is a template-based NLG that has a database of templates, where for each possible system action there is a template to be used~\cite{duvsek2014alex}. More sophisticated approach is a data-driven model that given a corpus of (system action; its surface realization) pairs learns to generate the natural language utterances~\cite{mairesse2010phrase}.
+The natural language generation (NLG) component generates the natural language utterance of the system action generated by DM. For example, if the system generates the action \texttt{confirm(food=chinese)} then the NLG should generate ``Did you say chinese food?''. The simplest approach is a template-based NLG that has a database of templates, where for each possible system action there is a template to be used~\cite{duvsek2014alex}. A more sophisticated approach is a data-driven model that given a corpus of (system action; its surface realization; alignment) tuples learns to generate the natural language utterances~\cite{mairesse2010phrase}.
 
 \subsubsection{Speech Synthesis}
-Speech synthesis takes the natural language utterance generated by NLG and transforms it to speech signal. Two main approaches are used: 1.) concatenative speech synthesis~\cite{campbell1997prosody,masuko1996speech}, and 2.) statistical parametric speech synthesis~\cite{zen2009statistical}
+Speech synthesis takes the natural language utterance generated by NLG and transforms it to speech signal. Two main approaches are used: 1.) concatenative speech synthesis~\cite{campbell1997prosody,masuko1996speech}, and 2.) statistical parametric speech synthesis~\cite{zen2009statistical} Users still consider the concatenative approach to be better, but the statistical parametric speech synthesis is catching up quickly~\cite{zen2009statistical}.
 
-The concatenative speech synthesis (also called unit-selection synthesis) uses a database of speech segments, from which it selects some of them, and concatenates them together to form the speech signal. For each speech unit to be synthesized it tries to find the most appropriate segment in terms of the similarity to the sound to be synthesized and the smoothness of concatenation with other segments.
+The concatenative speech synthesis (also called unit-selection synthesis) uses a database of speech segments, from which it selects some and concatenates them together to form the speech signal. The input utterance is converted to a sequence of speech units that describe how it should be pronounced. For each speech unit the synthetizer finds the most appropriate segment from the database, in terms of the similarity to the sound to be synthesized speech unit and the smoothness of concatenation with the other segments.
 
 Statistical parametric speech synthesis directly models the acoustics of the speech. During the training of the model, linguistic $l$ and acoustic features $a$ are extracted from the training data and a conditional model of $p(a|l)$ found. During synthesis the best acoustic features for the given linguistics features are found $\hat{a}=\operatorname{arg~max}_a p(a|l)$. HMM\cite{yoshimuray1999simultaneous}, DNN~\cite{ze2013statistical}, and RNN~\cite{zen2015unidirectional} were used as the conditional models.
 
-\section{LSTM Dialog State Tracker}
-\label{sec:dialog-state-tracking}
-The task of dialog state tracking is to monitor progress in the dialog and provide a compact representation of the dialog history in the form of a \emph{dialog state}~\cite{henderson2014second,zilka2013comparison}. Because of uncertainty in the user input, statistical dialog trackers maintain a probability distribution over all dialog states, called the \emph{belief state}. As the dialog progresses, the dialog state tracker updates this distribution given new observations.
+\subsection{Deep Neural Networks}
+Neural networks are known to be universal function approximators~\cite{hornik1989multilayer}, thus are able to model arbitrary measurable function with arbitrary accuracy given enough capacity. Thanks to the never-ending advances in the computational speed, which brought computer architectures capable of coping with previously inconcievable amounts of data, the neural networks field has experienced a resurgence. New applications of neural networks to almost all fields where machine learning was applied before yielded the new state-of-the-art results or came close to the state-of-the-art performance with much simpler models (e.g. automatic speech recognition~\cite{graves2005framewise}, machine translation~\cite{sutskever2014sequence}, image recognition~\cite{karpathy2014deep}, natural language processing~\cite{socher2012semantic}, protein structure prediction~\cite{sonderby2014protein}). Also because the fundamental algorithm that underlies the deep learning, the gradient descent algorithm, is very simple and computationally tractable, it allowed the researches to build bigger and better models. Proving once again that simple models with more data beat more complex models~\cite{halevy2009unreasonable}.
 
-In this paper, we define the dialog state at time $t$ as a vector $s_t \in C_1 \times ... \times C_k$ of $k$ dialog state components, sometimes called slots in the literature. Each component $c_i \in C_i=\{v_1, ..., v_{n_i}\}$ takes one of the $n_i$ values. Our dialog state tracker maintains a probability distribution over $s_t$ factorized by the dialog state components:
+The research in the deep neural networks is also fueled by the available open-source deep learning toolkits like Theano~\cite{bastien2012theano}, Torch~\cite{collobert2011torch7}, or Caffe~\cite{jia2014caffe}, that provide a good programming infrastructure for building custom neural network models and for testing hypotheses fast.
+% TODO: Maybe describe each more?
+
+The currently used neural networks are called deep because of their architecutre. It consists of several layers of parametrized computational units. We can classify the deep neural networks by their architecture into several conceptual classes:
+\begin{itemize}
+  \item fully-connected networks -- their layers are densely connected and their input is just a vector $x$ that is mapped to $y=f(x)=g(W\cdot x)$, where $g(.)$ is some activation function like $\operatorname{tanh}$, $\operatorname{\sigma}$, or $\operatorname{ReLU}$, and $W\in \mathbb{R}^2$ is a matrix of parameters
+  \item convolutional networks -- their layers are connected through a convolutional kernel; the convolutional kernel behaves like a small fully-connected layer applied at the different positions of the input simultaniously $y_1=f(x_{1:|k|})$, ..., $y_{n-|k|+1}=f(x_{n-|k|+1:n})$; the result is usually very large so it is transformed by a pooling layer into a smaller space $y=\operatorname{poll}(y_1, ..., y_{n-|k|+1})$
+  \item recurrent neural networks -- are almost the same as the fully-connected networks, but with the difference that they are applied to a sequence rather than a single input $x_1$, $x_2$, ..., one by one, and some of the results of the computation performend by computing an input $x_t$ (e.g. the values of the hidden layer) are passed on to the application on the next element of the sequence $x_{t+1}$; formally we have $(y_i, h_i) = f(x_i, h_{i-1})$, where $h_i$ denotes the results of the computation passed from the previous step, and $y_i$ is an output
+\end{itemize}
+However, this classification is not strict and almost every model from the literature is a combination of these classes. We aimed to give an inutitive feel for the different classes of architecture rather than their rigorous description which is out of scope of this thesis.
+% TODO: Describe each of the classes.
+
+\subsubsection{Long Short-Term Memory Networks}
+An important type of the recurrent neural networks is the long short-term memory (LSTM) model.
+
+Standard RNN model suffers from the vanishing gradient problem~\cite{bengio1994learning} on long sequences, and LSTMs were designed to overcome this issue by a special architecture.
+
+\section{LSTM Dialog State Tracker}
+\label{sec:lstm_dialog_state_tracker}
+In this section we will describe our dialog state tracking model based on the long short-term memory units. Our model fits in the big picture of a spoken dialog system described in~\autoref{sec:spoken_dialog_systems} as a dialog state tracker in the dialog management unit, and also replaces the spoken language understanding unit, and thus connects straight to the automatic speech recognition results.
+%The task of dialog state tracking is to monitor progress in the dialog and provide a compact representation of the dialog history in the form of a \emph{dialog state}~\cite{henderson2014second,zilka2013comparison}. Because of uncertainty in the user input, statistical dialog trackers maintain a probability distribution over all dialog states, called the \emph{belief state}. As the dialog progresses, the dialog state tracker updates this distribution given new observations.
+\subsection{Dialog State}
+In this thesis, we define the dialog state at time $t$ as a vector $s_t \in C_1 \times ... \times C_k$ of $k$ dialog state components, sometimes called slots. Each component $c_i \in C_i=\{v_1, ..., v_{n_i}\}$ takes one of the $n_i$ values. Our dialog state tracker maintains a probability distribution over $s_t$ factorized by the dialog state components:
 $$P(s_t|w_1, ..., w_t)=\prod_i p(c_i|w_1, ..., w_t; \theta)$$
 
 Note that all models $p(c_i|\cdot)$ share a substantial portion of the parameters, as detailed in the next section, so despite the fact that the predictions are factorized and thus independent, they were optimized to minimize a joint objective function and therefore naturally model the dependence between the dialog state components.
 
-
-
-
-\subsection{Deep Neural Networks}
-Neural networks is an old field
-
-The progress in computational power made neural networks feasible.
-
-
-
-LSTM Dialog State Tracker
-LSTM Dialog State Tracker with Knowledge Graph
-Attention-based Dialog State Tracker
-Reinforcement learning-based Dialog State Tracking
-
-\section{LSTM-based Dialog State Tracker}
-Our model fits in the big picture of a spoken dialog system described in~\autoref{sec:spoken_dialog_systems} as a dialog state tracker in the dialog management unit. Also it removes the need for the spoken language understanding unit, thus connects straight to the automatic speech recognition results.
-
-\section{LSTM Dialog State Tracker}
-\label{sec:lstm_dialog_state_tracker}
-Here we define our novel LSTM dialog state tracking model. Its task is to map a sequence of words in the dialog $w_1$, ..., $w_t$ to predictions for each of the $k$ dialog state components $(p^{(1)}_t, ..., p^{(k)}_t)$. Each $p^{(i)}_t$ is a vector corresponding to a probability distribution over the values of the i-th dialog state component. For example, $p^{(area)}_t$ is a probability distribution over values $\{north, south, east, west\}$ at the time $t$.
+\subsection{Model}
+The task of our LSTM tracker is to map a sequence of words in the dialog $w_1$, ..., $w_t$ to predictions for each of the $k$ dialog state components $(p^{(1)}_t, ..., p^{(k)}_t)$. Each $p^{(i)}_t$ is a vector corresponding to a probability distribution over the values of the i-th dialog state component. For example, $p^{(area)}_t$ is a probability distribution over values $\{north, south, east, west\}$ at the time $t$.
 
 \begin{figure*}
 \center
@@ -238,7 +242,7 @@ Here we define our novel LSTM dialog state tracking model. Its task is to map a 
 \label{fig:LecTrack}
 \end{figure*}
 
-\subsection{Model}
+
 Our dialog state tracking model can be seen as an encoder-classifier model, where an LSTM is used to encode the information from the input word sequence into a fixed-length vector representation. Given this representation, the classifier predicts a value for each of the dialog state components (as a probability distribution).
 
 Formally we have an encoder that maps an input word and a previous hidden state to a new hidden state, $Enc(w, h_{t-1})=h_t$, and a classifier that maps a hidden state to a prediction, $C(h_t)=p_t$. To encode the whole dialog, the encoder is applied sequentially on the input sequence of words. In our system, we have one encoder $Enc$ and multiple classifiers $C$, one for each dialog state component (e.g. $C^{(food)}$, $C^{(area)}$, ...).
@@ -453,3 +457,15 @@ We presented a first trainable incremental dialog state tracker that directly us
 
 
 
+
+\subsection{Deep Neural Networks}
+Neural networks is an old field
+
+The progress in computational power made neural networks feasible.
+
+
+
+LSTM Dialog State Tracker
+LSTM Dialog State Tracker with Knowledge Graph
+Attention-based Dialog State Tracker
+Reinforcement learning-based Dialog State Tracking
